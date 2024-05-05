@@ -11,6 +11,10 @@ uses
 type
   TString = string[20];
 
+  { specFuns data types }
+  TCompPartsArr = array of integer;
+  TcompPartsMtx = array of TCompPartsArr;
+
   { partList }
   PartListDataType = packed record
     partCode: integer;
@@ -1572,7 +1576,7 @@ var
 var
   checkErrorCode: integer;
   checkInput: TString;
-  checkInt, checkInt1, checkInt2: integer;
+  checkInt, checkInt1, checkInt2, temp: integer;
 
 var
   header, tempHeader, checkHeader1: CompatiblePartListType;
@@ -1652,15 +1656,20 @@ begin
       end;
       if isAgreed then
       begin
+        if checkInt1 > checkInt2 then
+        begin
+          temp := checkInt1;
+          checkInt1 := checkInt2;
+          checkInt2 := temp;
+        end;
         checkHeader1 := header;
-        while ((checkHeader1^.compatiblePartListInfo.firstPartCode +
-          checkHeader1^.compatiblePartListInfo.secondPartCode) <>
-          (checkInt1 + checkInt2)) and
-          (checkHeader1^.compatiblePartListNextElement <> nil) do
+        while ((checkHeader1^.compatiblePartListInfo.firstPartCode <> checkInt1)
+          and (checkHeader1^.compatiblePartListInfo.secondPartCode <> checkInt2)
+          ) and (checkHeader1^.compatiblePartListNextElement <> nil) do
           checkHeader1 := checkHeader1^.compatiblePartListNextElement;
-        if ((checkHeader1^.compatiblePartListInfo.firstPartCode +
-          checkHeader1^.compatiblePartListInfo.secondPartCode)
-          = (checkInt1 + checkInt2)) then
+        if ((checkHeader1^.compatiblePartListInfo.firstPartCode = checkInt1) and
+          (checkHeader1^.compatiblePartListInfo.secondPartCode = checkInt2))
+        then
         begin
           writeln('Данная запись уже есть в списке. Нажмите для повторного ввода.');
           readln;
@@ -2168,7 +2177,7 @@ var
 
 var
   checkInput: TString;
-  checkInt, checkInt1, checkInt2, checkErrorCode: integer;
+  checkInt, checkInt1, checkInt2, checkErrorCode, temp1: integer;
 
 var
   checkHeader, temp: CompatiblePartListType;
@@ -2229,15 +2238,21 @@ begin
         end;
         checkHeader := list;
         flag := true;
+        if checkInt1 > checkInt2 then
+        begin
+          temp1 := checkInt1;
+          checkInt1 := checkInt2;
+          checkInt2 := temp1;
+        end;
         while (checkHeader^.compatiblePartListNextElement <> nil) and flag do
         begin
-          if ((checkHeader^.compatiblePartListNextElement^.
-            compatiblePartListInfo.firstPartCode +
-            checkHeader^.compatiblePartListNextElement^.compatiblePartListInfo.
-            secondPartCode) <> (checkInt1 + checkInt2)) then
-            checkHeader := checkHeader^.compatiblePartListNextElement
+          if (checkHeader^.compatiblePartListNextElement^.
+            compatiblePartListInfo.firstPartCode = checkInt1) and
+            (checkHeader^.compatiblePartListNextElement^.compatiblePartListInfo.
+            secondPartCode = checkInt2) then
+            flag := false
           else
-            flag := false;
+            checkHeader := checkHeader^.compatiblePartListNextElement;
         end;
         if flag then
         begin
@@ -2515,7 +2530,8 @@ begin
             while (string(LowerCase(checkHeader1^.partListInfo.modelName)) <>
               findStr) and (checkHeader1^.partListNextElement <> nil) do
               checkHeader1 := checkHeader1^.partListNextElement;
-            if string(LowerCase(checkHeader1^.partListInfo.modelName)) = findStr then
+            if string(LowerCase(checkHeader1^.partListInfo.modelName)) = findStr
+            then
             begin
               writeln('Данная модель уже есть в списке. Нажмите для повторного ввода.');
               readln;
@@ -2751,7 +2767,7 @@ procedure EditInCompatiblePartList(list: CompatiblePartListType;
 
 var
   checkInput: TString;
-  checkInt, checkInt1, checkInt2, checkErrorCode: integer;
+  checkInt, checkInt1, checkInt2, temp, checkErrorCode: integer;
 
 var
   isNotExit, isNotExitCheck, isInList, isAgreed, flag1, flag2, isInListMain,
@@ -2815,15 +2831,19 @@ begin
             ClearScreen();
           end;
         end;
+        if checkInt1 > checkInt2 then
+        begin
+          temp := checkInt1;
+          checkInt1 := checkInt2;
+          checkInt2 := temp;
+        end;
         header1 := list;
-        while ((header1^.compatiblePartListInfo.firstPartCode +
-          header1^.compatiblePartListInfo.secondPartCode) <>
-          (checkInt1 + checkInt2)) and
+        while ((header1^.compatiblePartListInfo.firstPartCode <> checkInt1) and
+          (header1^.compatiblePartListInfo.secondPartCode <> checkInt2)) and
           (header1^.compatiblePartListNextElement <> nil) do
           header1 := header1^.compatiblePartListNextElement;
-        if ((header1^.compatiblePartListInfo.firstPartCode +
-          header1^.compatiblePartListInfo.secondPartCode) <>
-          (checkInt1 + checkInt2)) then
+        if ((header1^.compatiblePartListInfo.firstPartCode <> checkInt1) and
+          (header1^.compatiblePartListInfo.secondPartCode <> checkInt2)) then
         begin
           writeln('Данная запись отсутстует в списке. Нажмите для повторного ввода.');
           readln;
@@ -2968,9 +2988,26 @@ begin
         if not flag2 then
           case fieldCode of
             1:
-              header1^.compatiblePartListInfo.firstPartCode := checkInt;
+              begin
+                if checkInt > header1^.compatiblePartListInfo.secondPartCode
+                then
+                begin
+                  temp := checkInt;
+                  checkInt := header1^.compatiblePartListInfo.secondPartCode;
+                  header1^.compatiblePartListInfo.secondPartCode := temp;
+                end;
+                header1^.compatiblePartListInfo.firstPartCode := checkInt;
+              end;
             2:
-              header1^.compatiblePartListInfo.secondPartCode := checkInt;
+              begin
+                if checkInt < header1^.compatiblePartListInfo.firstPartCode then
+                begin
+                  temp := checkInt;
+                  checkInt := header1^.compatiblePartListInfo.firstPartCode;
+                  header1^.compatiblePartListInfo.firstPartCode := temp;
+                end;
+                header1^.compatiblePartListInfo.secondPartCode := checkInt;
+              end;
           end;
         ClearScreen();
         writeln('Запись отредактирована.');
@@ -3023,6 +3060,178 @@ begin
   end;
 end;
 
+{ SpecialFunctions }
+{ function SpecialFunctionsMenu }
+function SpecialFunctionsMenu(): integer;
+
+var
+  checkInput: TString;
+  checkInt, checkErrorCode: integer;
+
+begin
+  checkErrorCode := 1;
+  checkInput := '';
+  checkInt := 0;
+  while ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > 2))) do
+  begin
+    ClearScreen();
+    writeln('Вы выбрали пункт специальных функций.');
+    writeln;
+    writeln('Доступные специальные функции: ');
+    writeln;
+    writeln('1. Подбор всех возможных вариантов комплектации компьютера в заданном ценовом диапазоне.');
+    writeln('2. Оформление заказа понравившегося варианта.');
+    writeln;
+    write('Выберите функцию, введя ее номер(0 для выхода): ');
+    readln(checkInput);
+    writeln;
+    val(string(checkInput), checkInt, checkErrorCode);
+    if ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > 2))) then
+    begin
+      writeln('Выбор функции произведен некорректно. Нажмите для повторного ввода.');
+      readln;
+    end;
+  end;
+  result := checkInt;
+end;
+
+{ function GetCompatiblePartsArray }
+function GetCompatiblePartsArray(list: CompatiblePartListType): TCompPartsArr;
+
+  function Search(arr: TcompPartsMtx; code: integer): integer;
+
+  var
+    ans, i, c: integer;
+    flag: boolean;
+
+  begin
+    ans := -1;
+    i := 0;
+    c := length(arr) - 1;
+    flag := true;
+    while (i <= c) and (flag) do
+      if arr[i][0] = code then
+        flag := false
+      else
+        inc(i);
+    if not flag then
+      ans := i;
+    result := ans;
+  end;
+
+var
+  cmpPtsMtx: TcompPartsMtx;
+  id1, id2, i, min: integer;
+  res: TCompPartsArr;
+
+begin
+  list := list^.compatiblePartListNextElement;
+  while list <> nil do
+  begin
+    id1 := Search(cmpPtsMtx, list^.compatiblePartListInfo.firstPartCode);
+    id2 := Search(cmpPtsMtx, list^.compatiblePartListInfo.secondPartCode);
+    if id1 = -1 then
+    begin
+      SetLength(cmpPtsMtx, length(cmpPtsMtx) + 1);
+      SetLength(cmpPtsMtx[length(cmpPtsMtx) - 1],
+        length(cmpPtsMtx[length(cmpPtsMtx) - 1]) + 2);
+      cmpPtsMtx[length(cmpPtsMtx) - 1][0] :=
+        list^.compatiblePartListInfo.firstPartCode;
+      cmpPtsMtx[length(cmpPtsMtx) - 1][1] :=
+        list^.compatiblePartListInfo.secondPartCode;
+    end
+    else
+    begin
+      SetLength(cmpPtsMtx[id1], length(cmpPtsMtx[id1]) + 1);
+      cmpPtsMtx[id1][length(cmpPtsMtx[id1]) - 1] :=
+        list^.compatiblePartListInfo.secondPartCode;
+    end;
+    if id2 = -1 then
+    begin
+      SetLength(cmpPtsMtx, length(cmpPtsMtx) + 1);
+      SetLength(cmpPtsMtx[length(cmpPtsMtx) - 1],
+        length(cmpPtsMtx[length(cmpPtsMtx) - 1]) + 2);
+      cmpPtsMtx[length(cmpPtsMtx) - 1][0] :=
+        list^.compatiblePartListInfo.secondPartCode;
+      cmpPtsMtx[length(cmpPtsMtx) - 1][1] :=
+        list^.compatiblePartListInfo.firstPartCode;
+    end
+    else
+    begin
+      SetLength(cmpPtsMtx[id2], length(cmpPtsMtx[id2]) + 1);
+      cmpPtsMtx[id2][length(cmpPtsMtx[id2]) - 1] :=
+        list^.compatiblePartListInfo.firstPartCode;
+    end;
+    list := list^.compatiblePartListNextElement;
+  end;
+  if length(cmpPtsMtx) <> 0 then
+  begin
+    min := 0;
+    for i := 1 to length(cmpPtsMtx) - 1 do
+      if (length(cmpPtsMtx[i]) < length(cmpPtsMtx[min])) then
+        min := i;
+    result := cmpPtsMtx[min];
+  end
+  else
+    result := res;
+end;
+
+{ procedure GetAllCombsIndex }
+procedure GetAllCombsIndex(var IndexArr: TCompPartsMtx; n, m: integer);
+
+  function NextSet(var arr: TCompPartsArr): boolean;
+
+  var
+    k, i, j: integer;
+    res: boolean;
+
+  begin
+    k := m;
+    res := false;
+    i := k - 1;
+    while (i >= 0) and (not res) do
+    begin
+      if arr[i] < n - k + i + 1 then
+      begin
+        inc(arr[i]);
+        for j := i + 1 to k - 1 do
+          arr[j] := arr[j - 1] + 1;
+        res := true;
+      end;
+      dec(i);
+    end;
+    result := res;
+  end;
+
+  procedure Insert(arr: TCompPartsArr);
+
+  var
+    i: integer;
+
+  begin
+    SetLength(IndexArr, length(IndexArr) + 1);
+    for i := 0 to m - 1 do
+    begin
+      setLength(IndexArr[length(IndexArr) - 1], length(IndexArr[length(IndexArr) - 1]) + 1);
+      IndexArr[length(IndexArr) - 1][length(IndexArr[length(IndexArr) - 1]) - 1] := arr[i];
+    end;
+  end;
+
+var
+  arr: TCompPartsArr;
+  i: integer;
+
+begin
+  SetLength(arr, n);
+  for i := 0 to n - 1 do
+    arr[i] := i + 1;
+  Insert(arr);
+  if n >= m then
+    while NextSet(arr) do
+      Insert(arr);
+end;
+
+{ ExitFunctions }
 { function SaveWithoutChanges }
 function SaveWithoutChanges(list1: PartListType; list2: PartTypeListType;
   list3: CompatiblePartListType): boolean;
@@ -3264,6 +3473,7 @@ begin
         ClearScreen();
         writeln('Данные записаны по директории.');
         sleep(1200);
+
       end;
     end
     else
@@ -3323,16 +3533,22 @@ end;
 { functions codes }
 var
   mainMenuCode, showListCode, sortListCode, findInListCode, addToListCode,
-    deleteFromListCode, editInListCode: integer;
+    deleteFromListCode, editInListCode, specFunCode: integer;
   mainMenuContinue, isReadFromFile, showListContinue, sortListContinue,
     findInListContinue, addToListContinue, deleteFromListContinue,
-    editInListContinue: boolean;
+    editInListContinue, specFunContinue: boolean;
 
   { lists declaration }
 var
   partList: PartListType;
   partTypeList: PartTypeListType;
   compatiblePartList: CompatiblePartListType;
+
+  { SpecFuncs arrs and lists }
+var
+  cmpPtsArr: TCompPartsArr;
+  IndexMtx: TCompPartsMtx;
+  n, m: integer;
 
 begin
   { lists memory allocation }
@@ -3467,6 +3683,38 @@ begin
                 EditInPartTypeList(partTypeList);
               3:
                 EditInCompatiblePartList(compatiblePartList, partList);
+            end;
+          end;
+        end;
+      8: { SpecialFunctions }
+        begin
+          specFunContinue := true;
+          while specFunContinue do
+          begin
+            specFunCode := SpecialFunctionsMenu();
+            case specFunCode of
+              0:
+                specFunContinue := false;
+              1:
+                begin
+                  cmpPtsArr := GetCompatiblePartsArray(compatiblePartList);
+                  if length(cmpPtsArr) = 0 then
+                  begin
+                    ClearScreen();
+                    writeln('Комбинаций не обнаружилось.');
+                    sleep(1200);
+                  end
+                  else
+                  begin
+                    n := length(cmpPtsArr);
+                    for m := 2 to n do
+                      GetAllCombsIndex(indexMtx, n, m);
+                    ClearScreen();
+                    writeln('Комбинации подобраны.');
+                    sleep(1200);
+
+                  end;
+                end;
             end;
           end;
         end;
