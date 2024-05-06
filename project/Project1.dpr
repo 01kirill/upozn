@@ -3575,6 +3575,13 @@ begin
     ClearScreen();
     writeln('Информация записана в файл.');
     sleep(1200);
+    while toBuy^.partListNextElement <> nil do
+    begin
+      temp := toBuy^.partListNextElement^.partListNextElement;
+      dispose(toBuy^.partListNextElement);
+      toBuy^.partListNextElement := temp;
+    end;
+    dispose(toBuy);
   end
   else
   begin
@@ -3582,13 +3589,6 @@ begin
     writeln('Вы отказались от покупки.');
     sleep(1200);
   end;
-  while toBuy^.partListNextElement <> nil do
-  begin
-    temp := toBuy^.partListNextElement^.partListNextElement;
-    dispose(toBuy^.partListNextElement);
-    toBuy^.partListNextElement := temp;
-  end;
-  dispose(toBuy);
 end;
 
 { ExitFunctions }
@@ -4119,7 +4119,8 @@ begin
                       for i := 0 to length(IndexMtx) - 1 do
                         for j := 0 to length(IndexMtx[i]) - 1 do
                           IndexMtx[i][j] := cmpPtsArr[IndexMtx[i][j] - 1];
-                      setLength(sum, 0);
+                      SetLength(sum, 0);
+                      setLength(avaliable, 0);
                       sum := SortCombs(partList, IndexMtx, avaliable);
                       isSpecFunCompleted := true;
                     end;
