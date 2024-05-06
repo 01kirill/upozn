@@ -14,6 +14,9 @@ type
   { specFuns data types }
   TCompPartsArr = array of integer;
   TcompPartsMtx = array of TCompPartsArr;
+  TcompPartsArrPrice = array of real;
+  TCompPartsArrAvaliable = array of boolean;
+  TCombsFile = TextFile;
 
   { partList }
   PartListDataType = packed record
@@ -1822,14 +1825,14 @@ begin
   partCode := 0;
   checkInt := 0;
   checkHeader1 := nil;
-  ClearScreen();
-  writeln('По нажатию клавиши будет выведен список.');
-  writeln;
-  writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
-  readln;
-  ShowPartList(list);
   while isNotExit do
   begin
+    ClearScreen();
+    writeln('По нажатию клавиши будет выведен список.');
+    writeln;
+    writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
+    readln;
+    ShowPartList(list);
     isInList := true;
     while isInList do
     begin
@@ -2000,14 +2003,14 @@ begin
   checkInt := 0;
   partTypeCode := 0;
   checkHeader2 := nil;
-  ClearScreen();
-  writeln('По нажатию клавиши будет выведен список.');
-  writeln;
-  writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
-  readln;
-  ShowPartTypeList(list);
   while isNotExit do
   begin
+    ClearScreen();
+    writeln('По нажатию клавиши будет выведен список.');
+    writeln;
+    writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
+    readln;
+    ShowPartTypeList(list);
     isInList := true;
     while isInList do
     begin
@@ -2187,14 +2190,14 @@ begin
   isAgreed := false;
   checkInt1 := 0;
   checkHeader := nil;
-  ClearScreen();
-  writeln('По нажатию клавиши будет выведен список.');
-  writeln;
-  writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
-  readln;
-  ShowCompatiblePartList(list);
   while isNotExit do
   begin
+    ClearScreen();
+    writeln('По нажатию клавиши будет выведен список.');
+    writeln;
+    writeln('Во время просмотра выберите запись, чтобы в дальнейшем ввести ее код для удаления.');
+    readln;
+    ShowCompatiblePartList(list);
     isInList := true;
     while isInList do
     begin
@@ -2548,7 +2551,8 @@ begin
         write('Введите параметры(нажмите для перехода к следующему полю): ');
         readln(checkInput);
         writeln;
-        header^.partListInfo.parameters := checkInput;
+        if checkInput <> '' then
+          header^.partListInfo.parameters := checkInput;
         flag1 := false;
         flag2 := false;
         while (not flag1) and (not flag2) do
@@ -3062,17 +3066,23 @@ end;
 
 { SpecialFunctions }
 { function SpecialFunctionsMenu }
-function SpecialFunctionsMenu(): integer;
+function SpecialFunctionsMenu(isSpecFunCompleted: boolean): integer;
 
 var
   checkInput: TString;
-  checkInt, checkErrorCode: integer;
+  checkInt, checkErrorCode, right: integer;
 
 begin
   checkErrorCode := 1;
   checkInput := '';
   checkInt := 0;
-  while ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > 2))) do
+  case isSpecFunCompleted of
+    false:
+      right := 2;
+    true:
+      right := 3;
+  end;
+  while ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > right))) do
   begin
     ClearScreen();
     writeln('Вы выбрали пункт специальных функций.');
@@ -3081,12 +3091,14 @@ begin
     writeln;
     writeln('1. Подбор всех возможных вариантов комплектации компьютера в заданном ценовом диапазоне.');
     writeln('2. Оформление заказа понравившегося варианта.');
+    if isSpecFunCompleted then
+      writeln('3. Просмотр подобранных комбинаций.');
     writeln;
     write('Выберите функцию, введя ее номер(0 для выхода): ');
     readln(checkInput);
     writeln;
     val(string(checkInput), checkInt, checkErrorCode);
-    if ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > 2))) then
+    if ((checkErrorCode > 0) or ((checkInt < 0) or (checkInt > right))) then
     begin
       writeln('Выбор функции произведен некорректно. Нажмите для повторного ввода.');
       readln;
@@ -3121,7 +3133,7 @@ function GetCompatiblePartsArray(list: CompatiblePartListType): TCompPartsArr;
 
 var
   cmpPtsMtx: TcompPartsMtx;
-  id1, id2, i, min: integer;
+  id1, id2, i, j, min, temp: integer;
   res: TCompPartsArr;
 
 begin
@@ -3170,6 +3182,14 @@ begin
     for i := 1 to length(cmpPtsMtx) - 1 do
       if (length(cmpPtsMtx[i]) < length(cmpPtsMtx[min])) then
         min := i;
+    for i := 0 to length(cmpPtsMtx[min]) - 2 do
+      for j := i + 1 to length(cmpPtsMtx) - 1 do
+        if cmpPtsMtx[min][j] < cmpPtsMtx[min][i] then
+        begin
+          temp := cmpPtsMtx[min][j];
+          cmpPtsMtx[min][j] := cmpPtsMtx[min][i];
+          cmpPtsMtx[min][i] := temp;
+        end;
     result := cmpPtsMtx[min];
   end
   else
@@ -3177,7 +3197,7 @@ begin
 end;
 
 { procedure GetAllCombsIndex }
-procedure GetAllCombsIndex(var IndexArr: TCompPartsMtx; n, m: integer);
+procedure GetAllCombsIndex(var IndexArr: TcompPartsMtx; n, m: integer);
 
   function NextSet(var arr: TCompPartsArr): boolean;
 
@@ -3212,8 +3232,10 @@ procedure GetAllCombsIndex(var IndexArr: TCompPartsMtx; n, m: integer);
     SetLength(IndexArr, length(IndexArr) + 1);
     for i := 0 to m - 1 do
     begin
-      setLength(IndexArr[length(IndexArr) - 1], length(IndexArr[length(IndexArr) - 1]) + 1);
-      IndexArr[length(IndexArr) - 1][length(IndexArr[length(IndexArr) - 1]) - 1] := arr[i];
+      SetLength(IndexArr[length(IndexArr) - 1],
+        length(IndexArr[length(IndexArr) - 1]) + 1);
+      IndexArr[length(IndexArr) - 1][length(IndexArr[length(IndexArr) - 1]) - 1]
+        := arr[i];
     end;
   end;
 
@@ -3229,6 +3251,344 @@ begin
   if n >= m then
     while NextSet(arr) do
       Insert(arr);
+end;
+
+{ function SortAllCombs }
+function SortCombs(list: PartListType; var IndexMtx: TcompPartsMtx;
+  var avaliable: TCompPartsArrAvaliable): TcompPartsArrPrice;
+
+var
+  i, j: integer;
+  temp1: real;
+  sum: TcompPartsArrPrice;
+  temp2: TCompPartsArr;
+  head: PartListType;
+
+begin
+  head := list;
+  SetLength(sum, length(IndexMtx));
+  SetLength(avaliable, length(IndexMtx));
+  for i := 0 to length(IndexMtx) - 1 do
+  begin
+    avaliable[i] := true;
+    for j := 0 to length(IndexMtx[i]) - 1 do
+    begin
+      list := head^.partListNextElement;
+      while (list <> nil) and (list^.partListInfo.partCode <> IndexMtx[i][j]) do
+        list := list^.partListNextElement;
+      if list <> nil then
+        sum[i] := sum[i] + list^.partListInfo.price;
+    end;
+  end;
+  for i := 0 to length(sum) - 2 do
+    for j := i + 1 to length(sum) - 1 do
+      if sum[j] < sum[i] then
+      begin
+        temp1 := sum[j];
+        sum[j] := sum[i];
+        sum[i] := temp1;
+        temp2 := IndexMtx[j];
+        IndexMtx[j] := IndexMtx[i];
+        IndexMtx[i] := temp2;
+      end;
+  for i := 0 to length(IndexMtx) - 1 do
+    for j := 0 to length(IndexMtx[i]) - 1 do
+    begin
+      list := head^.partListNextElement;
+      while (list <> nil) and (list^.partListInfo.partCode <> IndexMtx[i][j]) do
+        list := list^.partListNextElement;
+      if list <> nil then
+        if list^.partListInfo.availability = 0 then
+          avaliable[i] := false;
+    end;
+
+  result := sum;
+end;
+
+{ procedure ShowAllCombs }
+function ShowAllCombs(list: PartListType; mtx: TcompPartsMtx;
+  sum: TcompPartsArrPrice; price: real): integer;
+
+var
+  i, j, size: integer;
+  head: PartListType;
+  path: string;
+  fl: TCombsFile;
+
+begin
+  path := ' ';
+  size := 0;
+  head := list;
+  repeat
+    writeln('Введите путь, в котором хотите создать текстовый файл(Нажмите, чтобы не сохранять).');
+    writeln;
+    readln(path);
+    if not directoryExists(path) and (path <> '') then
+    begin
+      writeln('Введенной директории не существует. Нажмите для повторного ввода.');
+      readln;
+    end;
+  until (path = '') or (directoryExists(path));
+  if path <> '' then
+  begin
+    path := path + '\CombinationsFile_upozn.txt';
+{$I-}
+    assignFile(fl, path);
+    rewrite(fl);
+    writeln(fl, 'Все подобранные варианты.');
+    writeln(fl);
+    writeln(fl,
+      '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    writeln(fl,
+      '| Номер | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  | Сумма |');
+    writeln(fl,
+      '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    for i := 0 to length(mtx) - 1 do
+    begin
+      for j := 0 to length(mtx[i]) - 1 do
+      begin
+        list := head^.partListNextElement;
+        while (list <> nil) and (list^.partListInfo.partCode <> mtx[i][j]) do
+          list := list^.partListNextElement;
+        if (list <> nil) and (sum[i] <= price + 0.000001) then
+        begin
+          write(fl, '|', (i + 1):7, '|');
+          write(fl, list^.partListInfo.partCode:19, ' |',
+            list^.partListInfo.partTypeCode:24, ' |',
+            list^.partListInfo.manufacturer:19, ' |',
+            list^.partListInfo.modelName:19, ' |', list^.partListInfo.parameters
+            :19, ' |', list^.partListInfo.price:9:2, ' |',
+            list^.partListInfo.availability:13, ' |', sum[i]:6:2, ' |');
+          writeln(fl);
+        end;
+      end;
+      if (list <> nil) and (sum[i] <= price + 0.000001) then
+        writeln(fl,
+          '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    end;
+    closeFile(fl);
+    ClearScreen();
+    writeln('Информация сохранена в файл.');
+    sleep(1200);
+  end;
+  ClearScreen();
+  writeln('Все подобранные варианты.');
+  writeln;
+  writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+  writeln('| Номер | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  | Сумма |');
+  writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+  for i := 0 to length(mtx) - 1 do
+  begin
+    for j := 0 to length(mtx[i]) - 1 do
+    begin
+      list := head^.partListNextElement;
+      while (list <> nil) and (list^.partListInfo.partCode <> mtx[i][j]) do
+        list := list^.partListNextElement;
+      if (list <> nil) and (sum[i] <= price + 0.000001) then
+      begin
+        inc(size);
+        write('|', (i + 1):7, '|');
+        write(list^.partListInfo.partCode:19, ' |',
+          list^.partListInfo.partTypeCode:24, ' |',
+          list^.partListInfo.manufacturer:19, ' |', list^.partListInfo.modelName
+          :19, ' |', list^.partListInfo.parameters:19, ' |',
+          list^.partListInfo.price:9:2, ' |', list^.partListInfo.availability
+          :13, ' |', sum[i]:6:2, ' |');
+        writeln;
+      end;
+    end;
+    if (list <> nil) and (sum[i] <= price + 0.000001) then
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+  end;
+  writeln;
+  writeln('Нажмите, чтобы продолжить.');
+  readln;
+  result := size;
+end;
+
+{ procedure MakeOrder }
+procedure MakeOrder(list: PartListType; mtx: TcompPartsMtx;
+  sum: TcompPartsArrPrice; avaliable: TCompPartsArrAvaliable; size: integer;
+  price: real);
+
+var
+  checkInput: TString;
+  checkInt, checkErrorCode: integer;
+
+var
+  i, j, k, c: integer;
+  head, toBuy, head1, temp: PartListType;
+  fl: TCombsFile;
+  path: string;
+
+begin
+  ClearScreen();
+  head := list;
+  k := 0;
+  writeln('Вы выбрали функцию оформления заказа.');
+  writeln;
+  writeln('Все подобранные варианты, возможные для заказа.');
+  writeln;
+  writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+  writeln('| Номер | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  | Сумма |');
+  writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+  for i := 0 to length(mtx) - 1 do
+  begin
+    for j := 0 to length(mtx[i]) - 1 do
+    begin
+      list := head^.partListNextElement;
+      while (list <> nil) and (list^.partListInfo.partCode <> mtx[i][j]) do
+        list := list^.partListNextElement;
+      if (list <> nil) and (sum[i] <= price + 0.000001) and (avaliable[i]) then
+      begin
+        write('|', (k + 1):7, '|');
+        write(list^.partListInfo.partCode:19, ' |',
+          list^.partListInfo.partTypeCode:24, ' |',
+          list^.partListInfo.manufacturer:19, ' |', list^.partListInfo.modelName
+          :19, ' |', list^.partListInfo.parameters:19, ' |',
+          list^.partListInfo.price:9:2, ' |', list^.partListInfo.availability
+          :13, ' |', sum[i]:6:2, ' |');
+        writeln;
+      end;
+    end;
+    if (list <> nil) and (sum[i] <= price + 0.000001) and (avaliable[i]) then
+    begin
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+      inc(k);
+    end;
+  end;
+  writeln;
+  writeln('Нажмите, чтобы продолжить.');
+  readln;
+  ClearScreen();
+  checkErrorCode := 1;
+  checkInt := -1;
+  while (checkErrorCode > 0) or ((checkInt < 0 - 1) or (checkInt >= k)) do
+  begin
+    write('Введите номер понравившегося варианта(или 0 для выхода): ');
+    readln(checkInput);
+    writeln;
+    val(checkInput, checkInt, checkErrorCode);
+    dec(checkInt);
+    if (checkErrorCode > 0) or ((checkInt < -1) or (checkInt >= k)) then
+    begin
+      writeln('Некорректный ввод. Нажмите для повторного ввода.');
+      readln;
+      ClearScreen();
+    end;
+  end;
+  if checkInt <> -1 then
+  begin
+    c := 0;
+    new(toBuy);
+    head1 := toBuy;
+    toBuy^.partListNextElement := nil;
+    for i := 0 to length(mtx) - 1 do
+    begin
+      for j := 0 to length(mtx[i]) - 1 do
+      begin
+        list := head^.partListNextElement;
+        while (list <> nil) and (list^.partListInfo.partCode <> mtx[i][j]) do
+          list := list^.partListNextElement;
+        if (list <> nil) and (sum[i] <= price + 0.000001) and (avaliable[i])
+        then
+        begin
+          if c = checkInt then
+          begin
+            new(toBuy^.partListNextElement);
+            toBuy := toBuy^.partListNextElement;
+            toBuy^.partListInfo := list^.partListInfo;
+            toBuy^.partListNextElement := nil;
+            k := c;
+          end;
+        end;
+      end;
+      if (list <> nil) and (sum[i] <= price + 0.000001) and (avaliable[i]) then
+      begin
+        inc(c);
+      end;
+    end;
+    ClearScreen();
+    writeln('Ваш заказ.');
+    writeln;
+    writeln('-----------------------------------------------------------------------------------------------------------------------------------------');
+    writeln('| Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  |');
+    writeln('-----------------------------------------------------------------------------------------------------------------------------------------');
+    toBuy := head1;
+    head1 := head1^.partListNextElement;
+    while head1 <> nil do
+    begin
+      write('|', head1^.partListInfo.partCode:19, ' |',
+        head1^.partListInfo.partTypeCode:24, ' |',
+        head1^.partListInfo.manufacturer:19, ' |', head1^.partListInfo.modelName
+        :19, ' |', head1^.partListInfo.parameters:19, ' |',
+        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability
+        :13, ' |');
+      writeln;
+      head1 := head1^.partListNextElement;
+    end;
+    writeln('-----------------------------------------------------------------------------------------------------------------------------------------');
+    writeln;
+    writeln('Сумма заказа: ', sum[k]:0:2);
+    writeln;
+    repeat
+      writeln('Введите путь, в котором хотите создать текстовый файл.');
+      writeln;
+      readln(path);
+      if not directoryExists(path) then
+      begin
+        writeln('Введенной директории не существует. Нажмите для повторного ввода.');
+        readln;
+        ClearScreen();
+      end;
+    until (directoryExists(path));
+    path := path + '\OrderFile_upozn.txt';
+{$I-}
+    assignFile(fl, path);
+    rewrite(fl);
+    head1 := toBuy;
+    writeln(fl, 'Ваш заказ.');
+    writeln(fl);
+    writeln(fl,
+      '-----------------------------------------------------------------------------------------------------------------------------------------');
+    writeln(fl,
+      '| Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  |');
+    writeln(fl,
+      '-----------------------------------------------------------------------------------------------------------------------------------------');
+    head1 := head1^.partListNextElement;
+    while head1 <> nil do
+    begin
+      write(fl, '|', head1^.partListInfo.partCode:19, ' |',
+        head1^.partListInfo.partTypeCode:24, ' |',
+        head1^.partListInfo.manufacturer:19, ' |', head1^.partListInfo.modelName
+        :19, ' |', head1^.partListInfo.parameters:19, ' |',
+        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability
+        :13, ' |');
+      writeln(fl);
+      head1 := head1^.partListNextElement;
+    end;
+    writeln(fl,
+      '-----------------------------------------------------------------------------------------------------------------------------------------');
+    writeln(fl);
+    writeln(fl, 'Сумма заказа: ', sum[k]:0:2);
+    closeFile(fl);
+    ClearScreen();
+    writeln('Информация записана в файл.');
+    sleep(1200);
+  end
+  else
+  begin
+    ClearScreen();
+    writeln('Вы отказались от покупки.');
+    sleep(1200);
+  end;
+  while toBuy^.partListNextElement <> nil do
+  begin
+    temp := toBuy^.partListNextElement^.partListNextElement;
+    dispose(toBuy^.partListNextElement);
+    toBuy^.partListNextElement := temp;
+  end;
+  dispose(toBuy);
 end;
 
 { ExitFunctions }
@@ -3473,7 +3833,6 @@ begin
         ClearScreen();
         writeln('Данные записаны по директории.');
         sleep(1200);
-
       end;
     end
     else
@@ -3513,7 +3872,7 @@ begin
     writeln('5. Добавление данных в списки.');
     writeln('6. Удаление данных из списков.');
     writeln('7. Редактирование данных списков.');
-    writeln('8. Подбор всех вариантов сборки компьютера в заданном ценовом диапазоне и оформление заказа(в разработке).');
+    writeln('8. Подбор всех вариантов сборки компьютера в заданном ценовом диапазоне и оформление заказа.');
     writeln('9. Выход из программы без сохранения изменений.');
     writeln('10. Выход из программы с сохранением изменений.');
     writeln;
@@ -3536,7 +3895,7 @@ var
     deleteFromListCode, editInListCode, specFunCode: integer;
   mainMenuContinue, isReadFromFile, showListContinue, sortListContinue,
     findInListContinue, addToListContinue, deleteFromListContinue,
-    editInListContinue, specFunContinue: boolean;
+    editInListContinue, specFunContinue, isSpecFunCompleted: boolean;
 
   { lists declaration }
 var
@@ -3547,8 +3906,13 @@ var
   { SpecFuncs arrs and lists }
 var
   cmpPtsArr: TCompPartsArr;
-  IndexMtx: TCompPartsMtx;
-  n, m: integer;
+  IndexMtx: TcompPartsMtx;
+  n, m, i, j: integer;
+  key, checkInput: TString;
+  checkErrorCode, size: integer;
+  sum: TcompPartsArrPrice;
+  avaliable: TCompPartsArrAvaliable;
+  price: real;
 
 begin
   { lists memory allocation }
@@ -3562,6 +3926,8 @@ begin
 
   partTypeList^.lastID := 0;
   partList^.lastID := 0;
+  price := -1;
+  size := 0;
 
   { init message }
   writeln('Добро пожаловать в каталог комплектующих. Нажмите, чтобы открыть меню.');
@@ -3569,6 +3935,7 @@ begin
 
   { working til exit }
   isReadFromFile := false;
+  isSpecFunCompleted := false;
   mainMenuContinue := true;
   while mainMenuContinue do
   begin
@@ -3691,28 +4058,83 @@ begin
           specFunContinue := true;
           while specFunContinue do
           begin
-            specFunCode := SpecialFunctionsMenu();
+            specFunCode := SpecialFunctionsMenu(isSpecFunCompleted);
             case specFunCode of
               0:
                 specFunContinue := false;
               1:
                 begin
-                  cmpPtsArr := GetCompatiblePartsArray(compatiblePartList);
-                  if length(cmpPtsArr) = 0 then
+                  key := '';
+                  if isSpecFunCompleted then
+                  begin
+                    while ((key[1] <> '1') or (key[1] <> '0')) and
+                      (length(key) <> 1) do
+                    begin
+                      ClearScreen();
+                      writeln('Комбинации уже составлены. Желаете ли совершить перезапись?');
+                      write('Введите 1, если да, или 0, если нет: ');
+                      readln(key);
+                      if ((key[1] <> '1') or (key[1] <> '0')) and
+                        (length(key) <> 1) then
+                      begin
+                        writeln('Некорректный ввод. Нажмите для повторного ввода.');
+                        readln;
+                      end;
+                    end;
+                  end;
+                  if (not isSpecFunCompleted) or (key = '1') then
+                  begin
+                    checkErrorCode := 1;
+                    price := -1;
+                    while (checkErrorCode > 0) and (price < 0) do
+                    begin
+                      ClearScreen();
+                      write('Введите ценовой диапазон: ');
+                      readln(checkInput);
+                      val(checkInput, price, checkErrorCode);
+                      if (checkErrorCode > 0) and (price < 0) then
+                      begin
+                        writeln('Некорректный ввод. Нажмите для повторного ввода.');
+                        readln;
+                      end;
+                    end;
+                    SetLength(cmpPtsArr, 0);
+                    cmpPtsArr := GetCompatiblePartsArray(compatiblePartList);
+                    if length(cmpPtsArr) = 0 then
+                    begin
+                      ClearScreen();
+                      writeln('Комбинаций не обнаружилось.');
+                      sleep(1200);
+                      isSpecFunCompleted := false;
+                    end
+                    else
+                    begin
+                      n := length(cmpPtsArr);
+                      SetLength(IndexMtx, 0);
+                      for m := 2 to n do
+                        GetAllCombsIndex(IndexMtx, n, m);
+                      ClearScreen();
+                      writeln('Комбинации подобраны.');
+                      sleep(1200);
+                      for i := 0 to length(IndexMtx) - 1 do
+                        for j := 0 to length(IndexMtx[i]) - 1 do
+                          IndexMtx[i][j] := cmpPtsArr[IndexMtx[i][j] - 1];
+                      setLength(sum, 0);
+                      sum := SortCombs(partList, IndexMtx, avaliable);
+                      isSpecFunCompleted := true;
+                    end;
+                  end;
+                end;
+              2:
+                begin
+                  MakeOrder(partList, IndexMtx, sum, avaliable, size, price);
+                end;
+              3:
+                begin
+                  if isSpecFunCompleted then
                   begin
                     ClearScreen();
-                    writeln('Комбинаций не обнаружилось.');
-                    sleep(1200);
-                  end
-                  else
-                  begin
-                    n := length(cmpPtsArr);
-                    for m := 2 to n do
-                      GetAllCombsIndex(indexMtx, n, m);
-                    ClearScreen();
-                    writeln('Комбинации подобраны.');
-                    sleep(1200);
-
+                    size := ShowAllCombs(partList, IndexMtx, sum, price);
                   end;
                 end;
             end;
