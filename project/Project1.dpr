@@ -3319,6 +3319,7 @@ begin
   path := ' ';
   size := 0;
   head := list;
+  ClearScreen();
   repeat
     writeln('Введите путь, в котором хотите создать текстовый файл(Нажмите, чтобы не сохранять).');
     writeln;
@@ -3327,6 +3328,7 @@ begin
     begin
       writeln('Введенной директории не существует. Нажмите для повторного ввода.');
       readln;
+      ClearScreen();
     end;
   until (path = '') or (directoryExists(path));
   if path <> '' then
