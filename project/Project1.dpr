@@ -3066,7 +3066,7 @@ end;
 
 { SpecialFunctions }
 { function SpecialFunctionsMenu }
-function SpecialFunctionsMenu(isSpecFunCompleted: boolean): integer;
+function SpecialFunctionsMenu(isSpecFunCompleted, isNeededToUpdate: boolean): integer;
 
 var
   checkInput: TString;
@@ -3086,6 +3086,8 @@ begin
   begin
     ClearScreen();
     writeln('Вы выбрали пункт специальных функций.');
+    if isNeededToUpdate then
+      writeln('Данные о комбинациях не актуальны, необходимо обновление.');
     writeln;
     writeln('Доступные специальные функции: ');
     writeln;
@@ -3408,10 +3410,10 @@ begin
   result := size;
 end;
 
-{ procedure MakeOrder }
-procedure MakeOrder(list: PartListType; mtx: TcompPartsMtx;
+{ function MakeOrder }
+function MakeOrder(list: PartListType; mtx: TcompPartsMtx;
   sum: TcompPartsArrPrice; avaliable: TCompPartsArrAvaliable; size: integer;
-  price: real);
+  price: real; isNeededToUpdate: boolean): boolean;
 
 var
   checkInput: TString;
@@ -3424,6 +3426,7 @@ var
   path: string;
 
 begin
+  result := isNeededToUpdate;
   ClearScreen();
   head := list;
   k := 0;
@@ -3500,6 +3503,7 @@ begin
             new(toBuy^.partListNextElement);
             toBuy := toBuy^.partListNextElement;
             toBuy^.partListInfo := list^.partListInfo;
+            dec(list^.partListInfo.availability);
             toBuy^.partListNextElement := nil;
             k := c;
           end;
@@ -3577,6 +3581,7 @@ begin
     ClearScreen();
     writeln('Информация записана в файл.');
     sleep(1200);
+    result := true;
     while toBuy^.partListNextElement <> nil do
     begin
       temp := toBuy^.partListNextElement^.partListNextElement;
@@ -3897,7 +3902,7 @@ var
     deleteFromListCode, editInListCode, specFunCode: integer;
   mainMenuContinue, isReadFromFile, showListContinue, sortListContinue,
     findInListContinue, addToListContinue, deleteFromListContinue,
-    editInListContinue, specFunContinue, isSpecFunCompleted: boolean;
+    editInListContinue, specFunContinue, isSpecFunCompleted, isNeededToUpdate: boolean;
 
   { lists declaration }
 var
@@ -3938,6 +3943,7 @@ begin
   { working til exit }
   isReadFromFile := false;
   isSpecFunCompleted := false;
+  isNeededToUpdate := false;
   mainMenuContinue := true;
   while mainMenuContinue do
   begin
@@ -4060,7 +4066,7 @@ begin
           specFunContinue := true;
           while specFunContinue do
           begin
-            specFunCode := SpecialFunctionsMenu(isSpecFunCompleted);
+            specFunCode := SpecialFunctionsMenu(isSpecFunCompleted, isNeededToUpdate);
             case specFunCode of
               0:
                 specFunContinue := false;
@@ -4125,12 +4131,13 @@ begin
                       setLength(avaliable, 0);
                       sum := SortCombs(partList, IndexMtx, avaliable);
                       isSpecFunCompleted := true;
+                      isNeededToUpdate := false;
                     end;
                   end;
                 end;
               2:
                 begin
-                  MakeOrder(partList, IndexMtx, sum, avaliable, size, price);
+                  isNeededToUpdate := MakeOrder(partList, IndexMtx, sum, avaliable, size, price, isNeededToUpdate);
                 end;
               3:
                 begin
