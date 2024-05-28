@@ -3528,7 +3528,7 @@ begin
         head1^.partListInfo.partTypeCode:24, ' |',
         head1^.partListInfo.manufacturer:19, ' |', head1^.partListInfo.modelName
         :19, ' |', head1^.partListInfo.parameters:19, ' |',
-        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability
+        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability * 0 + 1
         :13, ' |');
       writeln;
       head1 := head1^.partListNextElement;
@@ -3568,7 +3568,7 @@ begin
         head1^.partListInfo.partTypeCode:24, ' |',
         head1^.partListInfo.manufacturer:19, ' |', head1^.partListInfo.modelName
         :19, ' |', head1^.partListInfo.parameters:19, ' |',
-        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability
+        head1^.partListInfo.price:9:2, ' |', head1^.partListInfo.availability * 0 + 1
         :13, ' |');
       writeln(fl);
       head1 := head1^.partListNextElement;
