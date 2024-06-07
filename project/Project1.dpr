@@ -33,11 +33,8 @@ type
   PartListFileType = file of PartListDataType;
 
   { special functions }
-  TIndex = record
-    index, partCode: integer;
-  end;
 
-  TIndexArr = array of TIndex;
+  TRealArr = array of real;
   TCombInt = array of integer;
   TCombCombint = array of TCombInt;
   TCombCombCombInt = array of TCombCombint;
@@ -3134,7 +3131,7 @@ begin
 end;
 
 procedure GetAllComputerConfigs(price: real; ToShow: boolean;
-  list: CompatiblePartListType; list1: PartListType;
+  list: CompatiblePartListType; list1: PartListType; var OrderSums: TRealArr;
   var CombsToShow, CombsToBuy: TCombs);
 
   procedure findCombinations(arr: TCombInt; start, endd: integer;
@@ -3396,6 +3393,8 @@ begin
     if (not flag) and (sum <= price + 0.000001) then
     begin
       setLength(CombsToBuy, length(CombsToBuy) + 1);
+      setLength(OrderSums, length(OrderSums) + 1);
+      OrderSums[length(OrderSums) - 1] := sum;
       CombsToBuy[length(CombsToBuy) - 1] := CombsToShow[i];
     end;
   end;
@@ -3412,6 +3411,243 @@ begin
       writeln('Комбинации подобраны.');
       sleep(1200);
     end;
+end;
+
+procedure ShowConfigs(CombsToShow: TCombs);
+
+var
+  Fl: textFile;
+  i, j: integer;
+  path: string;
+
+begin
+  if length(CombsToShow) = 0 then
+  begin
+    ClearScreen();
+    writeln('Комбинаций нет.');
+    sleep(1200);
+  end
+  else
+  begin
+    ClearScreen();
+    writeln('Подобранные комбинации.');
+    writeln;
+    writeln('-------------------------------------------------------------------------------------------------------------------------------------------------');
+    writeln('|   N   | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  |');
+    writeln('-------------------------------------------------------------------------------------------------------------------------------------------------');
+    for i := 0 to length(CombsToShow) - 1 do
+    begin
+      for j := 0 to length(CombsToShow[i]) - 1 do
+        writeln('| ', (i + 1):6, '|', CombsToShow[i][j].partCode:20, '|',
+          CombsToShow[i][j].partTypeCode:25, '|', CombsToShow[i][j].manufacturer
+          :20, '|', CombsToShow[i][j].modelName:20, '|',
+          CombsToShow[i][j].parameters:20, '|', CombsToShow[i][j].price:10:2,
+          '|', CombsToShow[i][j].availability:14, '|');
+      writeln('-------------------------------------------------------------------------------------------------------------------------------------------------');
+    end;
+    writeln('Нажмите, чтобы продолжить.');
+    readln;
+    repeat
+      ClearScreen();
+      writeln('Введите директорию для записи файла(или нажмите, чтобы не записывать).');
+      writeln;
+      readln(path);
+      writeln;
+      if not directoryExists(path) and (path <> '') then
+      begin
+        writeln('Некорректный ввод. Нажмите для повторного ввода.');
+        readln;
+      end;
+    until (path = '') or (directoryExists(path));
+    if path = '' then
+    begin
+      ClearScreen;
+      writeln('Вы отказались от записи в файл.');
+      sleep(1200);
+    end
+    else
+    begin
+      path := path + '\ShowedCombinations_upozn.txt';
+      assignFile(Fl, path);
+      rewrite(Fl);
+      ClearScreen();
+      writeln(Fl, 'Подобранные комбинации.');
+      writeln(Fl);
+      writeln(Fl,
+        '-------------------------------------------------------------------------------------------------------------------------------------------------');
+      writeln(Fl,
+        '|   N   | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Количество  |');
+      writeln(Fl,
+        '-------------------------------------------------------------------------------------------------------------------------------------------------');
+      for i := 0 to length(CombsToShow) - 1 do
+      begin
+        for j := 0 to length(CombsToShow[i]) - 1 do
+          writeln(Fl, '| ', (i + 1):6, '|', CombsToShow[i][j].partCode:20, '|',
+            CombsToShow[i][j].partTypeCode:25, '|',
+            CombsToShow[i][j].manufacturer:20, '|', CombsToShow[i][j].modelName
+            :20, '|', CombsToShow[i][j].parameters:20, '|',
+            CombsToShow[i][j].price:10:2, '|',
+            CombsToShow[i][j].availability:14, '|');
+        writeln(Fl,
+          '-------------------------------------------------------------------------------------------------------------------------------------------------');
+      end;
+      closeFile(Fl);
+      ClearScreen;
+      writeln('Данные записаны в текстовый файл.');
+      sleep(1200);
+    end;
+  end;
+end;
+
+procedure MakeOrder(CombsToBuy: TCombs; list: PartListType;
+  OrderSums: TRealArr);
+
+var
+  Fl: textFile;
+  path: string;
+  i, j: integer;
+  checkInput: TString;
+  checkInt, checkErrorCode: integer;
+  header: PartListType;
+
+begin
+  header := list;
+  if length(CombsToBuy) = 0 then
+  begin
+    ClearScreen;
+    writeln('Доступных к заказу комбинаций нет.');
+    sleep(1200);
+  end
+  else
+  begin
+    ClearScreen();
+    writeln('Подобранные комбинации, доступные для заказа.');
+    writeln;
+    writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    writeln('|   N   | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Кол-во  |   Сумма   |');
+    writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    for i := 0 to length(CombsToBuy) - 1 do
+    begin
+      for j := 0 to length(CombsToBuy[i]) - 1 do
+        writeln('| ', (i + 1):6, '|', CombsToBuy[i][j].partCode:20, '|',
+          CombsToBuy[i][j].partTypeCode:25, '|', CombsToBuy[i][j].manufacturer
+          :20, '|', CombsToBuy[i][j].modelName:20, '|',
+          CombsToBuy[i][j].parameters:20, '|', CombsToBuy[i][j].price:10:2, '|',
+          CombsToBuy[i][j].availability:9, '|', OrderSums[i]:12:2, '|');
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+    end;
+    writeln('Нажмите, чтобы продолжить.');
+    readln;
+    ClearScreen;
+    checkErrorCode := -1;
+    checkInt := -1;
+    while (checkErrorCode > 0) or
+      ((checkInt < 0) or (checkInt > length(CombsToBuy))) do
+    begin
+      ClearScreen;
+      write('Введите номер понравившегося заказа(или 0 для выхода): ');
+      readln(checkInput);
+      writeln;
+      val(checkInput, checkInt, checkErrorCode);
+      if (checkErrorCode > 0) or
+        ((checkInt < 0) or (checkInt > length(CombsToBuy))) then
+      begin
+        writeln('Некорректный ввод. Нажмите для повторного ввода.');
+        readln;
+      end;
+    end;
+    if checkInt = 0 then
+    begin
+      ClearScreen();
+      writeln('Вы отказались от заказа.');
+      sleep(1200);
+    end
+    else
+    begin
+      ClearScreen();
+      writeln('Ваш заказ.');
+      writeln;
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+      writeln('|   N   | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Кол-во  |   Сумма   |');
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+      i := checkInt - 1;
+      for j := 0 to length(CombsToBuy[i]) - 1 do
+      begin
+        CombsToBuy[i][j].availability := 1;
+        writeln('| ', (i + 1):6, '|', CombsToBuy[i][j].partCode:20, '|',
+          CombsToBuy[i][j].partTypeCode:25, '|', CombsToBuy[i][j].manufacturer
+          :20, '|', CombsToBuy[i][j].modelName:20, '|',
+          CombsToBuy[i][j].parameters:20, '|', CombsToBuy[i][j].price:10:2, '|',
+          CombsToBuy[i][j].availability:9, '|', OrderSums[i]:12:2, '|');
+      end;
+      writeln('---------------------------------------------------------------------------------------------------------------------------------------------------------');
+      writeln;
+      writeln('Сумма заказа: ', OrderSums[i]:0:2);
+      writeln;
+      writeln('Нажмите, чтобы продолжить.');
+      readln;
+      repeat
+        ClearScreen();
+        writeln('Введите директорию для записи файла(или нажмите, чтобы не записывать).');
+        writeln;
+        readln(path);
+        writeln;
+        if not directoryExists(path) and (path <> '') then
+        begin
+          writeln('Некорректный ввод. Нажмите для повторного ввода.');
+          readln;
+        end;
+      until (path = '') or (directoryExists(path));
+      if path = '' then
+      begin
+        ClearScreen;
+        writeln('Вы отказались от записи в файл.');
+        sleep(1200);
+      end
+      else
+      begin
+        for j := 0 to length(CombsToBuy[i]) - 1 do
+        begin
+          list := header^.partListNextElement;
+          while list <> nil do
+          begin
+            if list^.partListInfo.partCode = CombsToBuy[i][j].partCode then
+              dec(list^.partListInfo.availability);
+            list := list^.partListNextElement
+          end;
+        end;
+        path := path + '\PurshasedCombination_upozn.txt';
+        assignFile(Fl, path);
+        rewrite(Fl);
+        writeln(Fl, 'Ваш заказ.');
+        writeln(Fl);
+        writeln(Fl,
+          '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+        writeln(Fl,
+          '|   N   | Код комплектующего | Код типа комплектующего |    Изготовитель    |       Модель       |      Параметры     |   Цена   |  Кол-во  |   Сумма   |');
+        writeln(Fl,
+          '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+        i := checkInt - 1;
+        for j := 0 to length(CombsToBuy[i]) - 1 do
+        begin
+          CombsToBuy[i][j].availability := 1;
+          writeln(Fl, '| ', (i + 1):6, '|', CombsToBuy[i][j].partCode:20, '|',
+            CombsToBuy[i][j].partTypeCode:25, '|', CombsToBuy[i][j].manufacturer
+            :20, '|', CombsToBuy[i][j].modelName:20, '|',
+            CombsToBuy[i][j].parameters:20, '|', CombsToBuy[i][j].price:10:2,
+            '|', CombsToBuy[i][j].availability:9, '|', OrderSums[i]:12:2, '|');
+        end;
+        writeln(Fl,
+          '---------------------------------------------------------------------------------------------------------------------------------------------------------');
+        writeln(Fl);
+        writeln(Fl, 'Сумма заказа: ', OrderSums[i]:0:2);
+        closeFile(Fl);
+        ClearScreen;
+        writeln('Данные записаны в текстовый файл.');
+        sleep(1200);
+      end;
+    end;
+  end;
 end;
 
 function SpecFunsMenu(): integer;
@@ -3765,6 +4001,7 @@ var
   price: real;
   ToRefresh: boolean;
   CombsToShow, CombsToBuy: TCombs;
+  OrderSums: TRealArr;
 
 begin
   { lists memory allocation }
@@ -3906,53 +4143,67 @@ begin
         begin
           ToRefresh := false;
           price := EnterPrice(ToRefresh);
+          setLength(OrderSums, 0);
+          setLength(CombsToShow, 0);
+          setLength(CombsToBuy, 0);
           GetAllComputerConfigs(price, true, compatiblePartList, partList,
-            CombsToShow, CombsToBuy);
+            OrderSums, CombsToShow, CombsToBuy);
           specFunContinue := true;
           while specFunContinue do
           begin
             specFunCode := SpecFunsMenu();
             case specFunCode of
               0:
-                specFunContinue := false;
+                begin
+                  setLength(OrderSums, 0);
+                  setLength(CombsToShow, 0);
+                  setLength(CombsToBuy, 0);
+                  specFunContinue := false;
+                end;
               1:
                 begin
                   ToRefresh := ToRefreshFun();
                   if ToRefresh then
                   begin
                     price := EnterPrice(ToRefresh);
+                    setLength(OrderSums, 0);
+                    setLength(CombsToShow, 0);
+                    setLength(CombsToBuy, 0);
                     GetAllComputerConfigs(price, true, compatiblePartList,
-                      partList, CombsToShow, CombsToBuy);
+                      partList, OrderSums, CombsToShow, CombsToBuy);
                   end;
                 end;
               2:
                 begin
-                  // MakeOrder();
+                  MakeOrder(CombsToBuy, partList, OrderSums);
+                  setLength(OrderSums, 0);
+                  setLength(CombsToShow, 0);
+                  setLength(CombsToBuy, 0);
                   GetAllComputerConfigs(price, false, compatiblePartList,
-                    partList, CombsToShow, CombsToBuy);
+                    partList, OrderSums, CombsToShow, CombsToBuy);
                 end;
               3:
-                // ShowConfigs();
-              end;
+                ShowConfigs(CombsToShow);
             end;
           end;
-        9: { SaveWithoutChanges function }
-          mainMenuContinue := SaveWithoutChanges(partList, partTypeList,
-            compatiblePartList);
-        10: { SaveWithChanges function }
-          mainMenuContinue := SaveWithChanges(partList, partTypeList,
-            compatiblePartList);
         end;
+      9: { SaveWithoutChanges function }
+        mainMenuContinue := SaveWithoutChanges(partList, partTypeList,
+          compatiblePartList);
+      10: { SaveWithChanges function }
+        mainMenuContinue := SaveWithChanges(partList, partTypeList,
+          compatiblePartList);
     end;
-    ClearScreen();
+  end;
+  ClearScreen();
 
-    { lists memory disposion }
-    dispose(partList);
-    dispose(partTypeList);
-    dispose(compatiblePartList);
+  { lists memory disposion }
+  dispose(partList);
+  dispose(partTypeList);
+  dispose(compatiblePartList);
 
-    { bye message }
-    writeln('Спасибо, что воспользовались нашим приложением.');
-    sleep(930);
+  { bye message }
+  writeln('Спасибо, что воспользовались нашим приложением.');
+  sleep(930);
 
 end.
